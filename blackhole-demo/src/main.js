@@ -19,7 +19,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1.06;
 app.appendChild(renderer.domElement);
 
 const raytraceScene = new THREE.Scene();
@@ -37,15 +37,15 @@ viewCamera.lookAt(0, 0, 0);
 const controls = createOrbitControls(viewCamera, renderer.domElement);
 
 const params = {
-  shadowRadius: 1.42,
-  diskInnerRadius: 2.55,
-  diskOuterRadius: 6.55,
-  diskThickness: 0.11,
-  diskIntensity: 1.32,
+  shadowRadius: 1.23,
+  diskInnerRadius: 2.45,
+  diskOuterRadius: 9.2,
+  diskThickness: 0.145,
+  diskIntensity: 1.28,
   lensingStrength: 2.18,
-  ringIntensity: 1.48,
-  ringRadius: 1.9,
-  ringWidth: 0.145,
+  ringIntensity: 1.05,
+  ringRadius: 1.54,
+  ringWidth: 0.09,
   stepScale: 0.092
 };
 
@@ -86,9 +86,9 @@ composer.addPass(new RenderPass(raytraceScene, quadCamera));
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.56,
-  0.76,
-  0.72
+  0.2,
+  0.22,
+  0.96
 );
 composer.addPass(bloomPass);
 

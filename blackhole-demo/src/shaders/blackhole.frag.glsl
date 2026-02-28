@@ -126,7 +126,7 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
 
       if (radius > uDiskInnerRadius && radius < uDiskOuterRadius) {
         float radial = (radius - uDiskInnerRadius) / (uDiskOuterRadius - uDiskInnerRadius);
-        float centerWeight = smoothstep(0.0, 0.15, radial) * (1.0 - smoothstep(0.68, 1.0, radial));
+        float centerWeight = smoothstep(0.14, 0.26, radial) * (1.0 - smoothstep(0.995, 1.0, radial));
         float thicknessWeight = exp(-abs(hit.y) / max(0.0001, uDiskThickness));
 
         float angle = atan(hit.z, hit.x);
@@ -161,11 +161,11 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
   color *= shadowMask;
 
   float ring = exp(-pow((minR - uRingRadius) / max(0.001, uRingWidth), 2.0));
-  color += vec3(2.85, 1.27, 0.28) * ring * uRingIntensity;
+  color += vec3(2.35, 1.05, 0.24) * ring * uRingIntensity;
 
-  float halo = exp(-0.42 * max(0.0, minR - uShadowRadius));
-  float haloMask = smoothstep(uShadowRadius + 0.03, uShadowRadius + 0.9, minR);
-  color += vec3(0.07, 0.03, 0.01) * halo * haloMask;
+  float halo = exp(-1.25 * max(0.0, minR - uShadowRadius));
+  float haloMask = smoothstep(uShadowRadius + 0.07, uShadowRadius + 0.22, minR);
+  color += vec3(0.012, 0.0045, 0.0015) * halo * haloMask;
 
   return max(color, vec3(0.0));
 }
