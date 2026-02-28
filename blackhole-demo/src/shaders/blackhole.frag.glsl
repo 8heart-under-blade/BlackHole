@@ -29,7 +29,7 @@ const float THETA_BLUR_SPREAD = 0.0075;
 const float UPPER_ARC_BOOST = 1.32;
 const float LOWER_IMAGE_COMPACTNESS = 1.12;
 const float DISK_WIDTH_SCALE = 1.5;
-const float SIDE_VIEW_BOOST = 0.55;
+const float SIDE_VIEW_BOOST = 0.42;
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 345.45));
@@ -152,10 +152,11 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
     float y0 = prevPos.y;
     float y1 = pos.y;
 
-    bool intersectsSlab = min(y0, y1) <= uDiskThickness && max(y0, y1) >= -uDiskThickness;
+    bool crossesMidplane = (y0 > 0.0 && y1 <= 0.0) || (y0 < 0.0 && y1 >= 0.0);
+    bool insideSlab = abs(0.5 * (y0 + y1)) <= uDiskThickness;
 
-    if (intersectsSlab) {
-      float t = clamp(-y0 / (y1 - y0 + 1e-5), 0.0, 1.0);
+    if (crossesMidplane || insideSlab) {
+      float t = crossesMidplane ? clamp(y0 / (y0 - y1 + 1e-5), 0.0, 1.0) : 0.5;
       vec3 hit = mix(prevPos, pos, t);
       float yDist = abs(hit.y);
       float radius = length(hit.xz);
@@ -180,7 +181,7 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
         float radialShape = primaryW * primaryBand + secondaryW * upperLayered + higherW * lowerCompact;
         radialShape *= innerGap * outerFade;
 
-        float thicknessWeight = exp(-yDist / max(0.0001, uDiskThickness * 0.68));
+        float thicknessWeight = exp(-yDist / max(0.0001, uDiskThickness * 0.42));
 
         float angle = atan(hit.z, hit.x);
         float flow = diskFlow(radius, angle);
@@ -189,22 +190,25 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
         vec3 toCam = normalize(ro - hit);
         float doppler = pow(clamp(1.0 + 0.56 * dot(velocity, toCam), 0.45, 1.55), 1.45);
 
-        float sideView = 1.0 + SIDE_VIEW_BOOST * (1.0 - smoothstep(0.18, 0.72, abs(toCam.y)));
+        float sideView = 1.0 + SIDE_VIEW_BOOST * (1.0 - smoothstep(0.12, 0.78, abs(toCam.y)));
         float grazing = 0.7 + 0.7 * pow(clamp(1.0 - abs(dir.y), 0.0, 1.0), 0.55);
         float multiImageBoost = primaryW * 1.0 + secondaryW * UPPER_ARC_BOOST + higherW * 0.62;
+        float sampleBlend = crossesMidplane ? 1.0 : 0.2;
 
-        float emissive = (0.14 + flow * 1.04) * radialShape * grazing * thicknessWeight * sideView;
+        float emissive = (0.14 + flow * 1.04) * radialShape * grazing * thicknessWeight * sideView * sampleBlend;
         emissive *= doppler * uDiskIntensity * multiImageBoost;
 
         float hotSpots = pow(clamp(flow - 0.62, 0.0, 1.0), 3.4);
         vec3 diskColor = blackbodyRamp(0.16 + flow * 0.88 + hotSpots * 0.24);
         color += throughput * diskColor * emissive;
 
-        throughput *= 0.69;
-        hitCount += 1;
+        if (crossesMidplane) {
+          throughput *= 0.69;
+          hitCount += 1;
 
-        if (hitCount >= 4 || throughput < 0.03) {
-          break;
+          if (hitCount >= 4 || throughput < 0.03) {
+            break;
+          }
         }
       }
     }

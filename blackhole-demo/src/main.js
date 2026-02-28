@@ -42,7 +42,7 @@ const params = {
   shadowRadius: 0.62,
   diskInnerRadius: 3.45,
   diskOuterRadius: 13.35,
-  diskThickness: 0.22,
+  diskThickness: 0.11,
   diskIntensity: 1.06,
   lensingStrength: 2.75,
   ringIntensity: 0.68,
