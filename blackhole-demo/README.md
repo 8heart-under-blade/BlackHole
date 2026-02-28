@@ -2,6 +2,11 @@
 
 Real-time Three.js + GLSL recreation of the NASA-style black hole look, including a lensed accretion disk, photon-ring-like rim, and bloom glow.
 
+## Reference
+
+- Local reference image: `../BlackHole.gif`
+- Source: https://www.space.com/black-holes-event-horizon-explained.html
+
 ## Run locally
 
 ```bash
