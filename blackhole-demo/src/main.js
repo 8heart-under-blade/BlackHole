@@ -33,7 +33,7 @@ const viewCamera = new THREE.PerspectiveCamera(
   0.1,
   100
 );
-viewCamera.position.set(0.0, 2.55, 10.8);
+viewCamera.position.set(0.0, 5.2, 22.0);
 viewCamera.lookAt(0, 0, 0);
 
 const controls = createOrbitControls(viewCamera, renderer.domElement);

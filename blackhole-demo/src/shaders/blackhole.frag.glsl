@@ -129,6 +129,7 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
 
   float minR = 1e8;
   float throughput = 1.0;
+  float diskAlpha = 0.0;
   int hitCount = 0;
 
   const int STEPS = 232;
@@ -201,6 +202,7 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
         float hotSpots = pow(clamp(flow - 0.62, 0.0, 1.0), 3.4);
         vec3 diskColor = blackbodyRamp(0.16 + flow * 0.88 + hotSpots * 0.24);
         color += throughput * diskColor * emissive;
+        diskAlpha = max(diskAlpha, throughput * emissive);
 
         if (crossesMidplane) {
           throughput *= 0.69;
@@ -219,7 +221,9 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
   }
 
   float shadowMask = smoothstep(uShadowRadius * 0.995, uShadowRadius * 1.015, minR);
-  color *= shadowMask;
+  if (diskAlpha < 1e-4) {
+    color *= shadowMask;
+  }
 
   float ring = exp(-pow((minR - uRingRadius) / max(0.0008, uRingWidth), 2.0));
   color += vec3(1.28, 0.46, 0.09) * ring * uRingIntensity;

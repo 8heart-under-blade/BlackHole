@@ -11,7 +11,7 @@ export function createOrbitControls(camera, domElement) {
 
   controls.enablePan = false;
   controls.minDistance = 5.8;
-  controls.maxDistance = 18.5;
+  controls.maxDistance = 32.0;
   controls.target.set(0, 0, 0);
 
   controls.mouseButtons = {
