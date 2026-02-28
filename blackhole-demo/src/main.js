@@ -19,7 +19,9 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.06;
+// Before: exposure clipped large areas to white.
+// After: lower exposure keeps the disk in deep orange/amber.
+renderer.toneMappingExposure = 0.94;
 app.appendChild(renderer.domElement);
 
 const raytraceScene = new THREE.Scene();
@@ -37,16 +39,16 @@ viewCamera.lookAt(0, 0, 0);
 const controls = createOrbitControls(viewCamera, renderer.domElement);
 
 const params = {
-  shadowRadius: 1.23,
-  diskInnerRadius: 2.45,
-  diskOuterRadius: 9.2,
+  shadowRadius: 1.24,
+  diskInnerRadius: 2.3,
+  diskOuterRadius: 8.9,
   diskThickness: 0.145,
-  diskIntensity: 1.28,
-  lensingStrength: 2.18,
-  ringIntensity: 1.05,
-  ringRadius: 1.54,
-  ringWidth: 0.09,
-  stepScale: 0.092
+  diskIntensity: 1.18,
+  lensingStrength: 2.34,
+  ringIntensity: 0.9,
+  ringRadius: 1.48,
+  ringWidth: 0.058,
+  stepScale: 0.088
 };
 
 const uniforms = {
@@ -86,9 +88,11 @@ composer.addPass(new RenderPass(raytraceScene, quadCamera));
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.2,
-  0.22,
-  0.96
+  // Before: bloom flooded the disk and caused a neon halo.
+  // After: high threshold + low strength keeps bloom subtle.
+  0.11,
+  0.28,
+  1.1
 );
 composer.addPass(bloomPass);
 

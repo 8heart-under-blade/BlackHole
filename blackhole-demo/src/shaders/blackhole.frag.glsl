@@ -22,6 +22,13 @@ uniform float uStepScale;
 
 varying vec2 vUv;
 
+// Tuned knobs for quick visual matching without rewiring uniforms.
+// Before: broad neon ribbons. After: thinner filaments and tighter critical rim.
+const float STREAK_SHARPNESS = 10.5;
+const float THETA_BLUR_SPREAD = 0.0075;
+const float UPPER_ARC_BOOST = 1.32;
+const float LOWER_IMAGE_COMPACTNESS = 1.7;
+
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 345.45));
   p += dot(p, p + 34.345);
@@ -48,44 +55,68 @@ float fbm(vec2 p) {
   float value = 0.0;
   float amplitude = 0.5;
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     value += amplitude * noise2(p);
-    p *= 2.07;
+    p *= 2.02;
     amplitude *= 0.5;
   }
 
   return value;
 }
 
+// Before: aggressive white-hot ramp clipped large portions of the disk.
+// After: deeper red/orange ramp with small yellow highlights only in hot spots.
 vec3 blackbodyRamp(float t) {
-  vec3 c0 = vec3(0.12, 0.04, 0.01);
-  vec3 c1 = vec3(0.92, 0.28, 0.03);
-  vec3 c2 = vec3(2.45, 0.98, 0.16);
-  vec3 c3 = vec3(3.0, 1.65, 0.55);
+  vec3 deepRed = vec3(0.03, 0.004, 0.0008);
+  vec3 red = vec3(0.34, 0.055, 0.010);
+  vec3 orange = vec3(0.95, 0.24, 0.028);
+  vec3 amber = vec3(1.70, 0.62, 0.065);
+  vec3 hotYellow = vec3(2.05, 0.95, 0.11);
 
-  t = clamp(t, 0.0, 1.4);
-  vec3 warm = mix(c0, c1, smoothstep(0.0, 0.45, t));
-  vec3 hot = mix(c1, c2, smoothstep(0.3, 0.95, t));
-  vec3 whiteHot = mix(c2, c3, smoothstep(0.9, 1.4, t));
+  t = clamp(t, 0.0, 1.25);
 
-  return mix(warm, hot, 0.65) + whiteHot * 0.35;
+  vec3 base = mix(deepRed, red, smoothstep(0.0, 0.24, t));
+  vec3 warm = mix(red, orange, smoothstep(0.18, 0.62, t));
+  vec3 hot = mix(orange, amber, smoothstep(0.55, 1.0, t));
+  vec3 spark = mix(amber, hotYellow, smoothstep(0.95, 1.25, t));
+
+  return base * 0.35 + warm * 0.75 + hot * 0.9 + spark * 0.18;
 }
 
+float filamentField(float radial, float angle) {
+  float shearAngle = angle + radial * 6.4 - uTime * 0.22;
+
+  float coarse = fbm(vec2(shearAngle * 6.1, radial * 28.0));
+  float fine = noise2(vec2(shearAngle * 18.0 + coarse * 3.0, radial * 67.0));
+
+  float ridgeA = pow(max(0.0, 1.0 - abs(coarse * 2.0 - 1.0)), STREAK_SHARPNESS);
+  float ridgeB = pow(max(0.0, 1.0 - abs(fine * 2.0 - 1.0)), STREAK_SHARPNESS + 2.0);
+
+  return ridgeA * 0.66 + ridgeB * 0.34;
+}
+
+// Before: repeated sin stripes looked grid-like.
+// After: layered ridge noise + theta taps gives thin striated flow lines.
 float diskFlow(float radius, float angle) {
   float radial = (radius - uDiskInnerRadius) / (uDiskOuterRadius - uDiskInnerRadius);
 
-  vec2 flowUv = vec2(angle * 12.0, radial * 15.0);
-  float warp = fbm(flowUv + vec2(radial * 12.0, uTime * 0.06));
+  float blur = THETA_BLUR_SPREAD * (1.0 + radial * 0.8);
+  float tap0 = filamentField(radial, angle);
+  float tap1 = filamentField(radial, angle + blur);
+  float tap2 = filamentField(radial, angle - blur);
+  float tap3 = filamentField(radial, angle + 2.0 * blur);
+  float tap4 = filamentField(radial, angle - 2.0 * blur);
 
-  float streamA = sin(angle * 170.0 + radial * 56.0 - uTime * 3.6 + warp * 6.0);
-  float streamB = sin(angle * 104.0 - radial * 72.0 + uTime * 2.7 + warp * 7.4);
-  float bandA = smoothstep(0.17, 1.0, 0.5 + 0.5 * streamA);
-  float bandB = smoothstep(0.28, 1.0, 0.5 + 0.5 * streamB);
+  float streaks = tap0 * 0.34 + (tap1 + tap2) * 0.24 + (tap3 + tap4) * 0.09;
 
-  float grain = fbm(vec2(angle * 26.0 - uTime * 0.2, radial * 48.0 + warp * 3.0));
-  float shear = abs(sin(angle * 14.0 + radial * 24.0 + grain * 4.0));
+  float bandNoise = fbm(vec2(radial * 13.0, angle * 2.4 - uTime * 0.07));
+  float ringA = 0.5 + 0.5 * sin(radial * 63.0 + bandNoise * 5.5 - uTime * 0.11);
+  float ringB = 0.5 + 0.5 * sin(radial * 98.0 - angle * 3.1 + uTime * 0.08);
+  float radialBands = smoothstep(0.2, 0.95, ringA * 0.62 + ringB * 0.38);
 
-  return (bandA * 0.75 + bandB * 0.6) * (0.7 + 0.3 * shear) + grain * 0.5;
+  float drift = fbm(vec2(angle * 4.7 - uTime * 0.17, radial * 10.2 + uTime * 0.06));
+
+  return clamp(streaks * (0.7 + 0.52 * radialBands) * (0.88 + 0.2 * drift), 0.0, 1.8);
 }
 
 vec3 traceBlackHole(vec3 ro, vec3 rd) {
@@ -98,7 +129,7 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
   float throughput = 1.0;
   int hitCount = 0;
 
-  const int STEPS = 220;
+  const int STEPS = 232;
 
   for (int i = 0; i < STEPS; i++) {
     float r = length(pos);
@@ -112,7 +143,7 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
     float gravity = uLensingStrength / (r * r + 0.08);
     dir = normalize(dir - normalize(pos) * gravity * uStepScale);
 
-    float stepLen = uStepScale * (0.72 + 0.1 * r);
+    float stepLen = uStepScale * (0.68 + 0.11 * r);
     prevPos = pos;
     pos += dir * stepLen;
 
@@ -126,24 +157,42 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
 
       if (radius > uDiskInnerRadius && radius < uDiskOuterRadius) {
         float radial = (radius - uDiskInnerRadius) / (uDiskOuterRadius - uDiskInnerRadius);
-        float centerWeight = smoothstep(0.14, 0.26, radial) * (1.0 - smoothstep(0.995, 1.0, radial));
-        float thicknessWeight = exp(-abs(hit.y) / max(0.0001, uDiskThickness));
+        float imageIndex = float(hitCount);
+
+        float primaryW = 1.0 - smoothstep(0.5, 1.1, imageIndex);
+        float secondaryW = smoothstep(0.0, 1.0, imageIndex) * (1.0 - smoothstep(1.5, 2.3, imageIndex));
+        float higherW = smoothstep(1.4, 2.2, imageIndex);
+
+        float innerGap = smoothstep(0.08, 0.2, radial);
+        float outerFade = 1.0 - smoothstep(0.93, 1.0, radial);
+
+        float primaryBand = exp(-pow((radial - 0.43) / 0.31, 2.0));
+        float upperBandA = exp(-pow((radial - 0.23) / 0.16, 2.0));
+        float upperBandB = exp(-pow((radial - 0.54) / 0.22, 2.0));
+        float upperLayered = upperBandA + upperBandB * 0.72;
+        float lowerCompact = exp(-pow((radial - 0.2) * LOWER_IMAGE_COMPACTNESS / 0.16, 2.0));
+
+        float radialShape = primaryW * primaryBand + secondaryW * upperLayered + higherW * lowerCompact;
+        radialShape *= innerGap * outerFade;
 
         float angle = atan(hit.z, hit.x);
         float flow = diskFlow(radius, angle);
 
         vec3 velocity = normalize(vec3(-hit.z, 0.0, hit.x));
         vec3 toCam = normalize(ro - hit);
-        float doppler = pow(clamp(1.0 + 0.72 * dot(velocity, toCam), 0.22, 1.95), 2.05);
+        float doppler = pow(clamp(1.0 + 0.56 * dot(velocity, toCam), 0.45, 1.55), 1.45);
 
-        float multiImageBoost = 1.0 + float(hitCount) * 0.38;
-        float emissive = (0.1 + flow * 1.48) * centerWeight * thicknessWeight;
+        float grazing = 0.55 + 0.95 * pow(clamp(1.0 - abs(dir.y), 0.0, 1.0), 0.65);
+        float multiImageBoost = primaryW * 1.0 + secondaryW * UPPER_ARC_BOOST + higherW * 0.62;
+
+        float emissive = (0.14 + flow * 1.04) * radialShape * grazing;
         emissive *= doppler * uDiskIntensity * multiImageBoost;
 
-        vec3 diskColor = blackbodyRamp(0.35 + flow * 0.85);
+        float hotSpots = pow(clamp(flow - 0.62, 0.0, 1.0), 3.4);
+        vec3 diskColor = blackbodyRamp(0.16 + flow * 0.88 + hotSpots * 0.24);
         color += throughput * diskColor * emissive;
 
-        throughput *= 0.74;
+        throughput *= 0.72;
         hitCount += 1;
 
         if (hitCount >= 4 || throughput < 0.03) {
@@ -157,15 +206,15 @@ vec3 traceBlackHole(vec3 ro, vec3 rd) {
     }
   }
 
-  float shadowMask = smoothstep(uShadowRadius * 0.92, uShadowRadius * 1.05, minR);
+  float shadowMask = smoothstep(uShadowRadius * 0.995, uShadowRadius * 1.015, minR);
   color *= shadowMask;
 
-  float ring = exp(-pow((minR - uRingRadius) / max(0.001, uRingWidth), 2.0));
-  color += vec3(2.35, 1.05, 0.24) * ring * uRingIntensity;
+  float ring = exp(-pow((minR - uRingRadius) / max(0.0008, uRingWidth), 2.0));
+  color += vec3(1.28, 0.46, 0.09) * ring * uRingIntensity;
 
-  float halo = exp(-1.25 * max(0.0, minR - uShadowRadius));
-  float haloMask = smoothstep(uShadowRadius + 0.07, uShadowRadius + 0.22, minR);
-  color += vec3(0.012, 0.0045, 0.0015) * halo * haloMask;
+  float halo = exp(-2.2 * max(0.0, minR - uShadowRadius));
+  float haloMask = smoothstep(uShadowRadius + 0.04, uShadowRadius + 0.16, minR);
+  color += vec3(0.004, 0.0012, 0.0003) * halo * haloMask;
 
   return max(color, vec3(0.0));
 }
@@ -183,8 +232,8 @@ void main() {
 
   vec3 color = traceBlackHole(uCameraPos, rd);
 
-  float vignette = 1.0 - smoothstep(0.45, 1.45, length(screen));
-  color *= mix(0.88, 1.02, vignette);
+  float vignette = 1.0 - smoothstep(0.55, 1.5, length(screen));
+  color *= mix(0.96, 1.0, vignette);
 
   gl_FragColor = vec4(color, 1.0);
 }
