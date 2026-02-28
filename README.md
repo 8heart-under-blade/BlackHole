@@ -4,6 +4,10 @@ This repository contains a real-time WebGL black hole visualization inspired by 
 
 The app is implemented as a standalone Vite + Three.js project in `blackhole-demo/`, using a fullscreen fragment shader for lensing, accretion disk emission, and photon-ring style highlights.
 
+## Build Attribution
+
+This project was created via Vibe Coding using OpenCode `1.2.15` and OpenAI model `GPT-5.3 xhigh`.
+
 ## Highlights
 
 - Real-time black hole rendering with procedural accretion disk (no texture assets)

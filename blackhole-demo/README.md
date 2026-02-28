@@ -2,6 +2,10 @@
 
 Real-time Three.js + GLSL recreation of the NASA-style black hole look, including a lensed accretion disk, photon-ring-like rim, and bloom glow.
 
+## Build Attribution
+
+This project was created via Vibe Coding using OpenCode `1.2.15` and OpenAI model `GPT-5.3 xhigh`.
+
 ## Reference
 
 - Local reference image: `../BlackHole.gif`
