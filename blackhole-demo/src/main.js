@@ -39,16 +39,16 @@ viewCamera.lookAt(0, 0, 0);
 const controls = createOrbitControls(viewCamera, renderer.domElement);
 
 const params = {
-  shadowRadius: 1.24,
-  diskInnerRadius: 2.3,
-  diskOuterRadius: 8.9,
-  diskThickness: 0.145,
-  diskIntensity: 1.18,
-  lensingStrength: 2.34,
-  ringIntensity: 0.9,
-  ringRadius: 1.48,
-  ringWidth: 0.058,
-  stepScale: 0.088
+  shadowRadius: 0.62,
+  diskInnerRadius: 3.45,
+  diskOuterRadius: 13.35,
+  diskThickness: 0.22,
+  diskIntensity: 1.06,
+  lensingStrength: 2.75,
+  ringIntensity: 0.68,
+  ringRadius: 0.76,
+  ringWidth: 0.032,
+  stepScale: 0.094
 };
 
 const uniforms = {
