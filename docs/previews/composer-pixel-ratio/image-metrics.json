@@ -1,0 +1,20 @@
+[
+  {
+    "dpr": 1,
+    "width": 800,
+    "height": 500,
+    "changedPixels": 0,
+    "totalPixels": 400000,
+    "meanAbsoluteChannelDifference": 0,
+    "maxChannelDifference": 0
+  },
+  {
+    "dpr": 2,
+    "width": 1600,
+    "height": 1000,
+    "changedPixels": 301289,
+    "totalPixels": 1600000,
+    "meanAbsoluteChannelDifference": 0.07822520833333334,
+    "maxChannelDifference": 9
+  }
+]

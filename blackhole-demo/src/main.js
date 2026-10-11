@@ -118,12 +118,12 @@ function updateCameraUniforms() {
 function onResize() {
   const width = window.innerWidth;
   const height = window.innerHeight;
+  const pixelRatio = Math.min(window.devicePixelRatio, 2);
 
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(pixelRatio);
   renderer.setSize(width, height);
+  composer.setPixelRatio(pixelRatio);
   composer.setSize(width, height);
-
-  bloomPass.setSize(width, height);
 
   viewCamera.aspect = width / height;
   viewCamera.updateProjectionMatrix();
