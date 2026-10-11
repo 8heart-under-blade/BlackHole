@@ -99,7 +99,7 @@ float filamentField(float radial, float angle) {
 
 // Before: repeated sin stripes looked grid-like.
 // After: layered ridge noise + theta taps gives thin striated flow lines.
-float diskFlow(float radius, float angle) {
+float diskFlowUnwrapped(float radius, float angle) {
   float radial = (radius - uDiskInnerRadius) / (uDiskOuterRadius - uDiskInnerRadius);
 
   float blur = THETA_BLUR_SPREAD * (1.0 + radial * 0.8);
@@ -119,6 +119,27 @@ float diskFlow(float radius, float angle) {
   float drift = fbm(vec2(angle * 4.7 - uTime * 0.17, radial * 10.2 + uTime * 0.06));
 
   return clamp(streaks * (0.7 + 0.52 * radialBands) * (0.88 + 0.2 * drift), 0.0, 1.8);
+}
+
+float diskFlow(float radius, float angle) {
+  const float PI = 3.141592653589793;
+  const float TAU = 2.0 * PI;
+  const float SEAM_BLEND_WIDTH = 0.35;
+
+  // atan wraps from +PI to -PI, but the procedural fields are not periodic.
+  // Crossfade both angular representations near the cut, including every
+  // noise and band term, so their values and slopes meet at the seam.
+  float wrappedAngle = mod(angle + PI, TAU) - PI;
+  float flow = diskFlowUnwrapped(radius, wrappedAngle);
+  float seamBlend = smoothstep(PI - SEAM_BLEND_WIDTH, PI, abs(wrappedAngle));
+
+  if (seamBlend > 0.0) {
+    float adjacentAngle = wrappedAngle + (wrappedAngle < 0.0 ? TAU : -TAU);
+    float adjacentFlow = diskFlowUnwrapped(radius, adjacentAngle);
+    flow = mix(flow, adjacentFlow, 0.5 * seamBlend);
+  }
+
+  return flow;
 }
 
 vec3 traceBlackHole(vec3 ro, vec3 rd) {
